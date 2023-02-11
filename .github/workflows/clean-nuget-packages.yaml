@@ -1,0 +1,31 @@
+on:
+  pull_request_target:
+    types:
+      - closed
+
+jobs:
+  if_merged:
+    if: github.event.pull_request.merged == true
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        dir: [Common, DataModel, Observability, RabbitMQ]
+    env:
+      PROJECT_DIR: src/App/${{ matrix.dir }} # project directory
+      GIT_HUB_API_URL: https://api.github.com/orgs/${{ github.repository_owner }}/packages/nuget
+    defaults:
+      run:
+        working-directory: ${{ env.PROJECT_DIR }} # Sets working directory for steps.
+    steps:
+    - name: Checkout Repo
+      uses: actions/checkout@v3
+
+    - name: Delete feature packages
+      run: |
+        PACKAGE_NAME=$(sed -ne '/PackageId/{s/.*<PackageId>\(.*\)<\/PackageId>.*/\1/p;q;}' ${{ matrix.dir }}.csproj)
+        echo "PACKAGE_NAME: $PACKAGE_NAME"
+        FEATURE_BRANCH=$(echo ${{ github.head_ref  }} | sed 's/.*\///')
+        echo "FEATURE_BRANCH: $FEATURE_BRANCH"
+        PACKAGE_URL=$(curl -H "Accept: application/vnd.github+json" -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" $GIT_HUB_API_URL/$PACKAGE_NAME/versions | jq '.[] | select(.name | contains("'${FEATURE_BRANCH}'")) | .url')
+        echo "PACKAGE_URL: $PACKAGE_URL"
+        [[ -n $PACKAGE_URL ]] && curl -X DELETE -H "Accept: application/vnd.github+json" -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" "$PACKAGE_URL"

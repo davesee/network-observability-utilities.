@@ -1,0 +1,45 @@
+stages:
+  - package
+
+image: mcr.microsoft.com/dotnet/sdk:6.0-bullseye-slim
+
+.push_nuget_package:
+  stage: package
+  variables:
+    NUGET_SOURCE: ${CI_API_V4_URL}/projects/${CI_PROJECT_ID}/packages/nuget/index.json
+    BUILD_CONFIG: Release
+    PROJECT_NAME: "."
+  allow_failure: false
+  script:
+    - echo " Running Unit Test "
+    - dotnet test test/App.Tests/"$PROJECT_NAME".Tests
+    - cd src/App/"$PROJECT_NAME"
+    - echo " Packing Project "
+    - if [ "$CI_COMMIT_REF_NAME" != "main" ]; then BUILD_CONFIG="Debug" VERSION_SUFFIX=$(echo $CI_COMMIT_REF_NAME | sed 's/.*\///'); fi
+    - dotnet pack --configuration $BUILD_CONFIG --version-suffix $VERSION_SUFFIX
+    - dotnet nuget add source $NUGET_SOURCE --name gitlab --username gitlab-ci-token --password $CI_JOB_TOKEN --store-password-in-clear-text
+    - echo " Push Project "
+    - dotnet nuget push "bin/$BUILD_CONFIG/*.nupkg" --source gitlab
+  rules:
+    - changes:
+        - "src/App/$PROJECT_NAME/**/*"
+
+publish-common:
+  extends: .push_nuget_package
+  variables:
+    PROJECT_NAME: Common
+
+publish-data-model:
+  extends: .push_nuget_package
+  variables:
+    PROJECT_NAME: DataModel
+
+publish-observability:
+  extends: .push_nuget_package
+  variables:
+    PROJECT_NAME: Observability
+
+publish-rabbitmq:
+  extends: .push_nuget_package
+  variables:
+    PROJECT_NAME: RabbitMQ

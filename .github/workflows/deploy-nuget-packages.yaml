@@ -1,0 +1,69 @@
+name: Publish Nuget Packages
+
+on:
+  push:
+    paths:
+     - 'src/App/**'
+
+jobs:
+  publish-nuget-package:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        dir: [Common, DataModel, Observability, RabbitMQ]
+    env:
+      DOTNET_VERSION: '6.0.401' # The .NET SDK version to use
+      DOTNET_BUILD_CONFIG: 'Release' # project build configuration
+      PROJECT_DIR: src/App/${{ matrix.dir }} # project directory
+      GITHUB_PACKAGE_REGISTRY_PASSWORD: ${{ secrets.GITHUB_TOKEN }} # Github api token
+      GITHUB_PACKAGE_REGISTRY_ORG_NAME: ${{ github.repository_owner }}
+      GITHUB_PACKAGE_REGISTRY_USERNAME: ${{ github.actor }}
+      GITHUB_PACKAGE_REGISTRY_SOURCE: https://nuget.pkg.github.com/${{ github.repository_owner }}
+    defaults:
+      run:
+        working-directory: ${{ env.PROJECT_DIR }} # Sets working directory for steps.
+    steps:
+    - name: Checkout Repo
+      uses: actions/checkout@v3
+
+    - name: Check if project files are updated
+      uses: dorny/paths-filter@v2 # Check if directory differs from main branch
+      id: changes
+      with:
+        base: ${{ github.ref }}
+        filters: |
+          src:
+            - '${{ env.PROJECT_DIR }}/**'
+
+    - name: Set package build configuration & version suffix
+      if: steps.changes.outputs.src == 'true' && github.ref != 'refs/heads/main'
+      run: |
+        echo "DOTNET_BUILD_CONFIG=Debug" >> $GITHUB_ENV
+        echo "VERSION_SUFFIX=$(echo $GITHUB_REF_NAME | sed 's/.*\///')" >> $GITHUB_ENV
+
+    - name: Setup .NET # Install dotnet dependencies
+      if: steps.changes.outputs.src == 'true'
+      uses: actions/setup-dotnet@v3
+      with:
+        dotnet-version: ${{ env.DOTNET_VERSION }}
+
+    - name: Run unit test # Runs unit test for project
+      if: steps.changes.outputs.src == 'true'
+      run: cd ../../../test/App.Tests/${{ matrix.dir }}.Tests && dotnet test
+
+    - name: Package project # Packages nuget project
+      if: steps.changes.outputs.src == 'true'
+      run: |
+        if [[ -n "$VERSION_SUFFIX" ]]; then
+          dotnet pack --configuration $DOTNET_BUILD_CONFIG --version-suffix $VERSION_SUFFIX
+        else
+          dotnet pack --configuration $DOTNET_BUILD_CONFIG
+        fi;
+
+    - name: Push package # Push package
+      if: steps.changes.outputs.src == 'true'
+      run: |
+       dotnet nuget push "bin/$DOTNET_BUILD_CONFIG/*.nupkg" \
+         --api-key $GITHUB_PACKAGE_REGISTRY_PASSWORD \
+         --source $GITHUB_PACKAGE_REGISTRY_SOURCE \
+         --skip-duplicate

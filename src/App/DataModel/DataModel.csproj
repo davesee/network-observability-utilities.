@@ -1,0 +1,29 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+	<PropertyGroup>
+		<TargetFramework>net6.0</TargetFramework>
+		<Nullable>enable</Nullable>
+		<RootNamespace>EFR.NetworkObservability.DataModel</RootNamespace>
+		<GenerateDocumentationFile>True</GenerateDocumentationFile>
+		<Configurations>Debug;Release</Configurations>
+		<PackageId>EFR.NetworkObservability.DataModel</PackageId>
+		<PackageTags>DataModel; Configurations; Services</PackageTags>
+		<VersionPrefix>1.0.0</VersionPrefix>
+		<Authors>CrewAthena</Authors>
+		<Company>Microsoft</Company>
+		<Description>Contains classes for interacting with databases using EF.</Description>
+		<RepositoryUrl>https://github.com/crew-athena-org/network-observability-utilities</RepositoryUrl>
+	</PropertyGroup>
+
+	<ItemGroup>
+		<PackageReference Include="EFCore.BulkExtensions" Version="6.5.6" />
+		<PackageReference Include="EntityFramework" Version="6.4.4" />
+		<PackageReference Include="Microsoft.EntityFrameworkCore" Version="6.0.10" />
+		<PackageReference Include="Microsoft.EntityFrameworkCore.InMemory" Version="6.0.10" />
+		<PackageReference Include="Microsoft.EntityFrameworkCore.Sqlite" Version="6.0.10" />
+		<PackageReference Include="Microsoft.EntityFrameworkCore.SqlServer" Version="6.0.10" />
+	</ItemGroup>
+
+	<ItemGroup>
+		<ProjectReference Include="..\Common\Common.csproj" />
+	</ItemGroup>
+</Project>

@@ -1,0 +1,12 @@
+* text=auto eol=lf
+
+# These files should have specific line endings
+*.sh  text eol=lf
+*.bat text eol=crlf
+*.cmd text eol=crlf
+
+# These files are binary and should be left untouched
+# (binary is a macro for -text -diff)
+*.jpeg	binary
+*.png binary
+*.gif binary
